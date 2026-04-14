@@ -348,8 +348,8 @@ export default function App() {
   if (screen === "home") return (
     <div style={S.app}>
       <GlobalStyles />
-      <div style={{ paddingBottom: 80 }}>
-        <div style={{ padding: "env(safe-area-inset-top, 44px) 20px 28px", textAlign: "center", background: "linear-gradient(180deg,#141414 0%,#080808 100%)", borderBottom: "1px solid #161616" }}>
+      <div className="scroll-body">
+        <div className="home-header">
           <div style={{ fontSize: 46, marginBottom: 10 }}>💪</div>
           <h1 style={{ fontFamily: "var(--fc)", fontSize: 30, fontWeight: 900, letterSpacing: 4, color: "#fff", lineHeight: 1.1 }}>
             PROGRAMME<br /><span style={{ color: "#FF6B35" }}>12 SEMAINES</span>
@@ -397,7 +397,7 @@ export default function App() {
   return (
     <div style={S.app}>
       <GlobalStyles />
-      <div style={{ position: "sticky", top: 0, zIndex: 10, background: "#0a0a0a", borderBottom: `2px solid ${day.color}`, padding: "12px 16px", display: "flex", alignItems: "center", gap: 12 }}>
+      <div className="sess-header" style={{ borderBottom: `2px solid ${day.color}` }}>
         <button onClick={() => setScreen("home")} style={{ background: "none", border: "none", color: "#666", fontSize: 13, cursor: "pointer", padding: "6px 0", WebkitAppearance: "none" }}>← Retour</button>
         <div style={{ flex: 1 }}>
           <p style={{ fontFamily: "var(--fc)", fontSize: 9, fontWeight: 700, letterSpacing: 2.5, color: day.color }}>{day.label}</p>
@@ -406,7 +406,7 @@ export default function App() {
         {started && <p style={{ fontFamily: "var(--fc)", fontSize: 22, fontWeight: 700, color: day.color }}>{elStr}</p>}
       </div>
 
-      <div style={{ paddingBottom: 80 }}>
+      <div className="scroll-body">
         {!started && (
           <div style={{ padding: "20px 14px" }}>
             <div style={{ background: "#111", border: "1px solid #1a1a1a", borderRadius: 12, padding: 16, marginBottom: 18 }}>
@@ -478,5 +478,36 @@ function GlobalStyles() {
     input, button, textarea, select { font-family: 'Barlow', sans-serif; }
     ::-webkit-scrollbar { width: 3px; }
     ::-webkit-scrollbar-thumb { background: #1e1e1e; border-radius: 2px; }
+
+    /* Safe area — Dynamic Island / notch iPhone */
+    .home-header {
+      padding-top: max(env(safe-area-inset-top), 20px);
+      padding-left: 20px;
+      padding-right: 20px;
+      padding-bottom: 28px;
+      text-align: center;
+      background: linear-gradient(180deg, #141414 0%, #080808 100%);
+      border-bottom: 1px solid #161616;
+    }
+
+    /* Header séance collant, descend sous la Dynamic Island */
+    .sess-header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: #0a0a0a;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding-top: max(env(safe-area-inset-top), 12px);
+      padding-bottom: 12px;
+      padding-left: 16px;
+      padding-right: 16px;
+    }
+
+    /* Bas de page : barre home indicator iPhone */
+    .scroll-body {
+      padding-bottom: calc(80px + env(safe-area-inset-bottom));
+    }
   `}</style>;
 }
