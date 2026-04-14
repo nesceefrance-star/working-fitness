@@ -62,12 +62,47 @@ const PROGRAM = {
 };
 
 const DAYS = ["lundi", "mardi", "mercredi", "jeudi"];
-const GK = "dc6zaTOxFJmzC";
 const STORAGE_KEY = "wt_history_v2";
+const RAPID_KEY = "19ac08fc08msh6ac4b9720660010p14bf34jsn838219e6e776";
+
+// Mapping exercice ID → ExerciseDB exercise ID
+const EDB_IDS = {
+  bench:     "0025", // barbell bench press
+  incline:   "0314", // incline dumbbell press
+  pecdeck:   "1629", // cable chest fly
+  ohpress:   "0526", // barbell seated overhead press
+  laterals:  "0331", // dumbbell lateral raise
+  tricord:   "0076", // cable pushdown rope
+  dips:      "0189", // chest dip
+  legpress:  "0389", // leg press
+  rdl:       "0407", // romanian deadlift
+  lunges:    "0294", // dumbbell walking lunge
+  legcurl:   "0382", // lying leg curl
+  calves:    "0349", // standing calf raise
+  plank:     "0571", // plank
+  legraise:  "0356", // hanging leg raise
+  crunch:    "1460", // cable crunch
+  latpull:   "0031", // lat pulldown wide grip
+  rowing:    "0038", // barbell bent over row
+  seatedrow: "0617", // cable seated row
+  facepull:  "0615", // cable face pull
+  oiseau:    "0297", // dumbbell rear delt fly
+  curlbarre: "0056", // ez bar curl
+  curlinc:   "0280", // incline dumbbell curl
+  goblet:    "0266", // dumbbell goblet squat
+  pushup:    "0557", // push up
+  rowdb:     "0309", // dumbbell one arm row
+  fentesc:   "0294", // dumbbell lunge
+  devep:     "0323", // dumbbell shoulder press
+  gainagefb: "0571", // plank
+};
+
+// Cache GIFs en mémoire pour éviter de reconsommer les appels API
+const gifCache = {};
 
 // ─── GIF ─────────────────────────────────────────────────────────────────────
 function ExGif({ exercise }) {
-  const [url, setUrl] = useState(null);
+  const [gifUrl, setGifUrl] = useState(null);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const fetched = useRef(false);
@@ -75,25 +110,59 @@ function ExGif({ exercise }) {
   const doFetch = useCallback(async () => {
     if (fetched.current) return;
     fetched.current = true;
+
+    const edbId = EDB_IDS[exercise.id];
+    if (!edbId) return;
+
+    // Check mémoire cache d'abord
+    if (gifCache[edbId]) { setGifUrl(gifCache[edbId]); return; }
+
     setLoading(true);
     try {
-      const res = await fetch(`https://api.giphy.com/v1/gifs/search?api_key=${GK}&q=${encodeURIComponent(exercise.search)}&limit=1&rating=g`);
-      const d = await res.json();
-      if (d.data?.[0]) setUrl(d.data[0].images.fixed_height.url);
+      const res = await fetch(
+        `https://exercisedb.p.rapidapi.com/exercises/exercise/${edbId}`,
+        {
+          headers: {
+            "X-RapidAPI-Key": RAPID_KEY,
+            "X-RapidAPI-Host": "exercisedb.p.rapidapi.com",
+          },
+        }
+      );
+      const data = await res.json();
+      if (data?.gifUrl) {
+        gifCache[edbId] = data.gifUrl;
+        setGifUrl(data.gifUrl);
+      }
     } catch {}
     setLoading(false);
-  }, [exercise.search]);
+  }, [exercise.id]);
 
   const toggle = () => { setOpen(v => !v); if (!fetched.current) doFetch(); };
 
   return (
     <div style={{ marginTop: 10 }}>
-      <button onClick={toggle} style={S.gifBtn}>{open ? "▲ Masquer" : "▶ Voir le mouvement"}</button>
+      <button onClick={toggle} style={S.gifBtn}>
+        {open ? "▲ Masquer" : "▶ Voir le mouvement"}
+      </button>
       {open && (
-        <div style={{ marginTop: 8, borderRadius: 10, overflow: "hidden", background: "#111", minHeight: 50 }}>
-          {loading && <p style={{ textAlign: "center", padding: 16, color: "#555", fontSize: 12 }}>Chargement…</p>}
-          {url && !loading && <img src={url} alt={exercise.name} style={{ width: "100%", display: "block", maxHeight: 200, objectFit: "cover" }} />}
-          {!url && !loading && <p style={{ textAlign: "center", padding: 12, color: "#444", fontSize: 11 }}>GIF non disponible</p>}
+        <div style={{ marginTop: 8, borderRadius: 10, overflow: "hidden", background: "#f8f8f8", minHeight: 50 }}>
+          {loading && (
+            <p style={{ textAlign: "center", padding: 20, color: "#999", fontSize: 12, background: "#111" }}>
+              Chargement…
+            </p>
+          )}
+          {gifUrl && !loading && (
+            <img
+              src={gifUrl}
+              alt={exercise.name}
+              style={{ width: "100%", display: "block", maxHeight: 280, objectFit: "contain", background: "#f8f8f8" }}
+            />
+          )}
+          {!gifUrl && !loading && (
+            <p style={{ textAlign: "center", padding: 12, color: "#444", fontSize: 11, background: "#111" }}>
+              GIF non disponible
+            </p>
+          )}
         </div>
       )}
     </div>
