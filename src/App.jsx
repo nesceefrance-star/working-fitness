@@ -59,12 +59,13 @@ function GlobalStyles() {
   return <style>{`
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-    html, body { height: 100%; background: ${C.bg}; font-family: 'Inter', -apple-system, sans-serif; color: ${C.ink}; -webkit-text-size-adjust: 100%; overscroll-behavior: none; }
+    html { height: 100%; height: -webkit-fill-available; background: ${C.bg}; }
+    body { height: 100%; min-height: -webkit-fill-available; background: ${C.bg}; font-family: 'Inter', -apple-system, sans-serif; color: ${C.ink}; -webkit-text-size-adjust: 100%; overscroll-behavior: none; }
     #root { height: 100%; display: flex; flex-direction: column; }
     input, button, textarea, select { font-family: inherit; }
     ::-webkit-scrollbar { width: 2px; }
     ::-webkit-scrollbar-thumb { background: ${C.border}; }
-    .scroll-y { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    .scroll-y { overflow-y: auto; -webkit-overflow-scrolling: touch; min-height: 0; flex: 1; }
     .press { transition: opacity .12s; cursor: pointer; }
     .press:active { opacity: .7; }
     button { border: none; cursor: pointer; }
@@ -103,7 +104,7 @@ function ScreenHeader({ title, onBack, right }) {
       padding: `max(env(safe-area-inset-top), 16px) 16px 12px`,
       background: C.card, borderBottom: `1px solid ${C.border}`,
       display: 'flex', alignItems: 'center', gap: 10,
-      position: 'sticky', top: 0, zIndex: 10,
+      flexShrink: 0,
     }}>
       {onBack && (
         <button onClick={onBack} style={{ background: C.mutedLight, border: 'none', borderRadius: 10, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>←</button>
@@ -209,7 +210,7 @@ function HomeScreen({ navigate, expenses, checklistDone }) {
   ]
 
   return (
-    <div className="scroll-y" style={{ flex: 1, background: C.bg }}>
+    <div className="scroll-y" style={{ background: C.bg }}>
       {/* HEADER */}
       <div style={{
         paddingTop: 'max(env(safe-area-inset-top), 20px)',
@@ -240,7 +241,7 @@ function HomeScreen({ navigate, expenses, checklistDone }) {
         </div>
       </div>
 
-      <div style={{ padding: '16px 16px 100px' }}>
+      <div style={{ padding: 'calc(env(safe-area-inset-bottom) + 80px) 16px 16px', paddingTop: 16 }}>
         {/* STATS ROW */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
           <Card onClick={() => navigate('budget')} style={{ padding: 14 }}>
@@ -336,9 +337,9 @@ function PlanningScreen({ navigate, planningDone, setPlanningDone }) {
   }
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: C.bg }}>
+    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', background: C.bg }}>
       <ScreenHeader title="Planning — 17 jours" />
-      <div className="scroll-y" style={{ flex: 1, padding: '12px 16px 100px' }}>
+      <div className="scroll-y" style={{ flex: 1, padding: '12px 16px', paddingBottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
         {PLANNING_DAYS.map((day, idx) => {
           const isOpen = openDay === day.id
           const doneItems = day.items.filter(i => planningDone[i.id])
@@ -446,12 +447,12 @@ function PlacesScreen({ navigate, params = {} }) {
   const isRestaurant = catFilter === 'all' || catFilter === 'restaurant' || catFilter === 'breakfast'
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: C.bg }}>
+    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', background: C.bg }}>
       <div style={{
         paddingTop: 'max(env(safe-area-inset-top), 12px)',
         padding: `max(env(safe-area-inset-top), 12px) 16px 12px`,
         background: C.card, borderBottom: `1px solid ${C.border}`,
-        position: 'sticky', top: 0, zIndex: 10,
+        flexShrink: 0,
       }}>
         <h2 style={{ fontSize: 17, fontWeight: 700, marginBottom: 10 }}>📍 Lieux — {filtered.length} résultats</h2>
         <input
@@ -471,7 +472,7 @@ function PlacesScreen({ navigate, params = {} }) {
         )}
       </div>
 
-      <div className="scroll-y" style={{ flex: 1, padding: '12px 16px 100px' }}>
+      <div className="scroll-y" style={{ flex: 1, padding: '12px 16px', paddingBottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
         {filtered.length === 0 && (
           <div style={{ textAlign: 'center', padding: '60px 20px', color: C.muted }}>
             <p style={{ fontSize: 40 }}>🔍</p>
@@ -512,7 +513,7 @@ function PlaceDetailScreen({ navigate, goBack, screenParams, favorites, setFavor
   ].filter(Boolean)
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: C.bg }}>
+    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', background: C.bg }}>
       <ScreenHeader
         title={place.name}
         onBack={goBack}
@@ -522,7 +523,7 @@ function PlaceDetailScreen({ navigate, goBack, screenParams, favorites, setFavor
           </button>
         }
       />
-      <div className="scroll-y" style={{ flex: 1, padding: '16px 16px 100px' }}>
+      <div className="scroll-y" style={{ flex: 1, padding: '16px 16px', paddingBottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
         {/* HEADER CARD */}
         <Card style={{ marginBottom: 16 }}>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginBottom: 8 }}>
@@ -637,7 +638,7 @@ function BudgetScreen({ navigate, expenses, setExpenses }) {
   const deleteExpense = (id) => setExpenses(e => e.filter(x => x.id !== id))
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: C.bg }}>
+    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', background: C.bg }}>
       <ScreenHeader
         title="💰 Budget"
         right={
@@ -647,7 +648,7 @@ function BudgetScreen({ navigate, expenses, setExpenses }) {
           </div>
         }
       />
-      <div className="scroll-y" style={{ flex: 1, padding: '16px 16px 100px' }}>
+      <div className="scroll-y" style={{ flex: 1, padding: '16px 16px', paddingBottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
         {/* SUMMARY */}
         <div style={{ background: `linear-gradient(135deg, ${C.ocean}, ${C.turquoise})`, borderRadius: 20, padding: 20, marginBottom: 16, color: '#fff' }}>
           <p style={{ fontSize: 11, fontWeight: 700, opacity: 0.8, letterSpacing: 1 }}>BUDGET TOTAL ESTIMÉ</p>
@@ -844,12 +845,12 @@ function ChecklistScreen({ checklistDone, setChecklistDone }) {
   const pct = Math.round((doneAll / totalAll) * 100)
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: C.bg }}>
+    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', background: C.bg }}>
       <div style={{
         paddingTop: 'max(env(safe-area-inset-top), 16px)',
         padding: `max(env(safe-area-inset-top), 16px) 16px 16px`,
         background: C.card, borderBottom: `1px solid ${C.border}`,
-        position: 'sticky', top: 0, zIndex: 10,
+        flexShrink: 0,
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
           <h2 style={{ fontSize: 17, fontWeight: 700 }}>✅ Check-list avant départ</h2>
@@ -860,7 +861,7 @@ function ChecklistScreen({ checklistDone, setChecklistDone }) {
         </div>
         <p style={{ fontSize: 12, color: C.muted, marginTop: 6 }}>{pct}% complété</p>
       </div>
-      <div className="scroll-y" style={{ flex: 1, padding: '12px 16px 100px' }}>
+      <div className="scroll-y" style={{ flex: 1, padding: '12px 16px', paddingBottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
         {CHECKLIST_GROUPS.map(g => {
           const isOpen = openGroup === g.id
           const groupDone = g.items.filter(i => checklistDone[i.id]).length
@@ -921,9 +922,9 @@ function ChecklistScreen({ checklistDone, setChecklistDone }) {
 // ── SCREEN: SOS ───────────────────────────────────────────────────────────────
 function SOSScreen({ goBack }) {
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: C.bg }}>
+    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', background: C.bg }}>
       <ScreenHeader title="🚨 SOS — Urgences" onBack={goBack} />
-      <div className="scroll-y" style={{ flex: 1, padding: '16px 16px 100px' }}>
+      <div className="scroll-y" style={{ flex: 1, padding: '16px 16px', paddingBottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
         <div style={{ background: C.dangerLight, border: '1px solid #FCA5A5', borderRadius: 14, padding: '14px 16px', marginBottom: 16, textAlign: 'center' }}>
           <p style={{ fontSize: 30, marginBottom: 4 }}>🚨</p>
           <p style={{ fontWeight: 700, fontSize: 16, color: C.danger }}>Urgences : composez le 911</p>
@@ -978,9 +979,9 @@ function CarScreen({ goBack, checklistDone, setChecklistDone }) {
   }, {})
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: C.bg }}>
+    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', background: C.bg }}>
       <ScreenHeader title="🚗 Voiture" onBack={goBack} />
-      <div className="scroll-y" style={{ flex: 1, padding: '16px 16px 100px' }}>
+      <div className="scroll-y" style={{ flex: 1, padding: '16px 16px', paddingBottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
         <Card style={{ marginBottom: 16, background: `linear-gradient(135deg, ${C.sandLight}, ${C.goldLight})` }}>
           <p style={{ fontWeight: 700, fontSize: 16, marginBottom: 8 }}>🚗 Véhicule recommandé</p>
           <p style={{ fontSize: 14, color: C.inkLight, fontWeight: 600 }}>{CAR_INFO.recommendation}</p>
@@ -1050,9 +1051,9 @@ function DocumentsScreen({ goBack, checklistDone, setChecklistDone }) {
   }, {})
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: C.bg }}>
+    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', background: C.bg }}>
       <ScreenHeader title="📄 Documents & Coffre-fort" onBack={goBack} />
-      <div className="scroll-y" style={{ flex: 1, padding: '16px 16px 100px' }}>
+      <div className="scroll-y" style={{ flex: 1, padding: '16px 16px', paddingBottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
         <div style={{ background: C.coralLight, border: `1px solid ${C.coral}44`, borderRadius: 14, padding: '12px 14px', marginBottom: 16 }}>
           <p style={{ fontWeight: 700, fontSize: 13, color: C.coral }}>🔒 Coffre-fort local</p>
           <p style={{ fontSize: 12, color: C.inkLight, marginTop: 4 }}>Les documents sont stockés localement sur votre appareil. Ne photographiez jamais vos numéros de passeport en clair.</p>
@@ -1130,8 +1131,8 @@ export default function App() {
   return (
     <>
       <GlobalStyles />
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', background: C.bg, maxWidth: 500, margin: '0 auto', boxShadow: '0 0 40px rgba(0,0,0,0.1)' }}>
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: C.bg, maxWidth: 500, margin: '0 auto', boxShadow: '0 0 40px rgba(0,0,0,0.1)' }}>
+        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
           {screen === 'home'         && <HomeScreen {...shared} />}
           {screen === 'planning'     && <PlanningScreen {...shared} />}
           {screen === 'places'       && <PlacesScreen {...shared} params={screenParams} />}
