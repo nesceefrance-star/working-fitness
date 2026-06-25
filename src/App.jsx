@@ -467,6 +467,134 @@ function PlanningScreen({ navigate, planningDone, setPlanningDone }) {
   )
 }
 
+// ── FORM: AJOUTER UN LIEU ─────────────────────────────────────────────────────
+const ADD_CATEGORIES = [
+  { id: 'restaurant', label: '🍽 Restaurant' },
+  { id: 'breakfast', label: '☕ Petit-déj / Brunch' },
+  { id: 'activity', label: '🎯 Activité' },
+  { id: 'shopping', label: '🛍 Shopping' },
+  { id: 'beach', label: '🏖 Plage' },
+  { id: 'beach_club', label: '🏊 Beach Club / Hôtel' },
+  { id: 'supermarket', label: '🛒 Supermarché' },
+  { id: 'pharmacy', label: '💊 Pharmacie' },
+  { id: 'synagogue', label: '✡️ Synagogue' },
+  { id: 'other', label: '📌 Autre' },
+]
+
+function AddPlaceForm({ onSave, onClose }) {
+  const [name, setName] = useState('')
+  const [category, setCategory] = useState('restaurant')
+  const [kosherStatus, setKosherStatus] = useState('unknown')
+  const [area, setArea] = useState('')
+  const [address, setAddress] = useState('')
+  const [distance, setDistance] = useState('')
+  const [priceLevel, setPriceLevel] = useState(2)
+  const [notes, setNotes] = useState('')
+
+  const isRestaurant = category === 'restaurant' || category === 'breakfast'
+
+  const directionsUrl = address.trim()
+    ? `https://www.google.com/maps/dir/580+72nd+St+Miami+Beach+FL+33141/${encodeURIComponent(address.trim())}`
+    : null
+
+  const save = () => {
+    if (!name.trim()) return
+    onSave({
+      id: `custom_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      name: name.trim(),
+      category,
+      kosherStatus: isRestaurant ? kosherStatus : undefined,
+      area: area.trim() || 'Miami',
+      address: address.trim() || 'À vérifier',
+      distanceFrom72ParkMinutes: distance ? Number(distance) : undefined,
+      priceLevel: Number(priceLevel),
+      personalNotes: notes.trim() || undefined,
+      isCustom: true,
+      tags: ['ajouté manuellement'],
+    })
+    onClose()
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.55)', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+      <div style={{ background: C.card, borderRadius: '20px 20px 0 0', padding: '20px 16px', paddingBottom: 'calc(20px + env(safe-area-inset-bottom))', maxHeight: '90vh', overflowY: 'auto' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 800 }}>📌 Ajouter un lieu</h2>
+          <button onClick={onClose} style={{ background: C.mutedLight, border: 'none', borderRadius: 10, padding: '6px 12px', fontSize: 13, fontWeight: 600, color: C.ink }}>✕</button>
+        </div>
+
+        <label style={LBL}>Nom *</label>
+        <input style={{ ...INP, marginBottom: 14 }} placeholder="Ex: Café Versailles" value={name} onChange={e => setName(e.target.value)} />
+
+        <label style={LBL}>Catégorie</label>
+        <select style={{ ...INP, marginBottom: 14 }} value={category} onChange={e => setCategory(e.target.value)}>
+          {ADD_CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+        </select>
+
+        {isRestaurant && (
+          <>
+            <label style={LBL}>Statut cacher</label>
+            <select style={{ ...INP, marginBottom: 14 }} value={kosherStatus} onChange={e => setKosherStatus(e.target.value)}>
+              <option value="kosher_certified">🟢 Cacher certifié</option>
+              <option value="kosher_style">🟡 Sans tampon (à vérifier)</option>
+              <option value="not_kosher">⚪ Non cacher</option>
+              <option value="unknown">❓ À vérifier</option>
+            </select>
+          </>
+        )}
+
+        <label style={LBL}>Quartier / Zone</label>
+        <input style={{ ...INP, marginBottom: 14 }} placeholder="Ex: Surfside, Wynwood, South Beach…" value={area} onChange={e => setArea(e.target.value)} />
+
+        <label style={LBL}>Adresse complète</label>
+        <input style={{ ...INP, marginBottom: directionsUrl ? 8 : 14 }} placeholder="Ex: 9700 Collins Ave, Bal Harbour FL" value={address} onChange={e => setAddress(e.target.value)} />
+
+        {directionsUrl && (
+          <a href={directionsUrl} target="_blank" rel="noreferrer" style={{
+            display: 'flex', alignItems: 'center', gap: 8, background: C.ocean + '12',
+            border: `1px solid ${C.ocean}44`, borderRadius: 12, padding: '10px 14px',
+            textDecoration: 'none', marginBottom: 14,
+          }}>
+            <span style={{ fontSize: 18 }}>🗺</span>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: 13, fontWeight: 700, color: C.ocean }}>Vérifier la distance depuis 72 Park</p>
+              <p style={{ fontSize: 11, color: C.muted }}>Ouvre Google Maps avec l'itinéraire →</p>
+            </div>
+            <span style={{ fontSize: 14, color: C.ocean }}>↗</span>
+          </a>
+        )}
+
+        <label style={LBL}>Distance depuis 72 Park (en minutes)</label>
+        <input type="number" style={{ ...INP, marginBottom: 14 }} placeholder="Ex: 15" value={distance} onChange={e => setDistance(e.target.value)} />
+
+        <label style={LBL}>Prix</label>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+          {[1, 2, 3, 4].map(n => (
+            <button key={n} onClick={() => setPriceLevel(n)} style={{
+              flex: 1, padding: '10px 4px', borderRadius: 10,
+              background: priceLevel === n ? C.ocean : C.mutedLight,
+              color: priceLevel === n ? '#fff' : C.muted,
+              border: 'none', fontWeight: 700, fontSize: 12,
+            }}>{'●'.repeat(n)}</button>
+          ))}
+        </div>
+
+        <label style={LBL}>Notes / Pourquoi ce lieu</label>
+        <textarea style={{ ...INP, marginBottom: 20, minHeight: 64, resize: 'none' }} placeholder="Recommandé par…, à tester, spécialité…" value={notes} onChange={e => setNotes(e.target.value)} />
+
+        <button onClick={save} disabled={!name.trim()} style={{
+          width: '100%', background: name.trim() ? C.ocean : C.mutedLight,
+          color: name.trim() ? '#fff' : C.muted,
+          border: 'none', borderRadius: 14, padding: '16px',
+          fontSize: 16, fontWeight: 700,
+        }}>
+          Enregistrer
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ── SCREEN: PLACES ────────────────────────────────────────────────────────────
 const PLACE_FILTERS = [
   { id: 'all', label: '🗂 Tous' },
@@ -488,36 +616,41 @@ const KOSHER_FILTERS = [
   { id: 'not_kosher', label: '⚪ Non cacher' },
 ]
 
-function PlacesScreen({ navigate, params = {} }) {
+function PlacesScreen({ navigate, params = {}, customPlaces = [], setCustomPlaces }) {
   const [catFilter, setCatFilter] = useState(params.filter || 'all')
   const [kosherFilter, setKosherFilter] = useState('all')
   const [search, setSearch] = useState('')
+  const [showAdd, setShowAdd] = useState(false)
 
-  const filtered = useMemo(() => PLACES.filter(p => {
+  const allPlaces = useMemo(() => [...PLACES, ...customPlaces], [customPlaces])
+
+  const filtered = useMemo(() => allPlaces.filter(p => {
     if (catFilter !== 'all' && p.category !== catFilter) return false
     if (kosherFilter !== 'all' && p.kosherStatus !== kosherFilter) return false
     if (search && !p.name.toLowerCase().includes(search.toLowerCase()) && !p.area?.toLowerCase().includes(search.toLowerCase())) return false
     return true
-  }), [catFilter, kosherFilter, search])
+  }), [allPlaces, catFilter, kosherFilter, search])
 
   const isRestaurant = catFilter === 'all' || catFilter === 'restaurant' || catFilter === 'breakfast'
 
   return (
-    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', background: C.bg }}>
+    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', background: C.bg, position: 'relative' }}>
       <div style={{
         paddingTop: 'max(env(safe-area-inset-top), 12px)',
         padding: `max(env(safe-area-inset-top), 12px) 16px 12px`,
         background: C.card, borderBottom: `1px solid ${C.border}`,
         flexShrink: 0,
       }}>
-        <h2 style={{ fontSize: 17, fontWeight: 700, marginBottom: 10 }}>📍 Lieux — {filtered.length} résultats</h2>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+          <h2 style={{ fontSize: 17, fontWeight: 700 }}>📍 Lieux — {filtered.length}</h2>
+          <button onClick={() => setShowAdd(true)} className="press" style={{ background: C.ocean, color: '#fff', border: 'none', borderRadius: 12, padding: '7px 14px', fontSize: 14, fontWeight: 700 }}>
+            + Ajouter
+          </button>
+        </div>
         <input
           type="text" placeholder="🔍  Rechercher…" value={search}
           onChange={e => setSearch(e.target.value)}
-          style={{
-            width: '100%', background: C.mutedLight, border: 'none', borderRadius: 12,
-            padding: '10px 14px', fontSize: 14, outline: 'none', marginBottom: 10,
-          }} />
+          style={{ width: '100%', background: C.mutedLight, border: 'none', borderRadius: 12, padding: '10px 14px', fontSize: 14, outline: 'none', marginBottom: 10 }} />
         <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
           {PLACE_FILTERS.map(f => <Pill key={f.id} label={f.label} active={catFilter === f.id} onClick={() => setCatFilter(f.id)} />)}
         </div>
@@ -539,13 +672,20 @@ function PlacesScreen({ navigate, params = {} }) {
           <PlaceCard key={p.id} place={p} onPress={() => navigate('place_detail', { placeId: p.id })} />
         ))}
       </div>
+
+      {showAdd && (
+        <AddPlaceForm
+          onSave={place => setCustomPlaces(prev => [...prev, place])}
+          onClose={() => setShowAdd(false)}
+        />
+      )}
     </div>
   )
 }
 
 // ── SCREEN: PLACE DETAIL ──────────────────────────────────────────────────────
-function PlaceDetailScreen({ navigate, goBack, screenParams, favorites, setFavorites }) {
-  const place = PLACES.find(p => p.id === screenParams.placeId)
+function PlaceDetailScreen({ navigate, goBack, screenParams, favorites, setFavorites, customPlaces = [], setCustomPlaces }) {
+  const place = PLACES.find(p => p.id === screenParams.placeId) || customPlaces.find(p => p.id === screenParams.placeId)
   if (!place) return <div style={{ padding: 20 }}><button onClick={goBack}>← Retour</button><p>Lieu introuvable</p></div>
 
   const isFav = favorites.includes(place.id)
@@ -557,6 +697,15 @@ function PlaceDetailScreen({ navigate, goBack, screenParams, favorites, setFavor
     : `https://maps.google.com/?q=${encodeURIComponent(place.name + ' Miami')}`
 
   const wazeUrl = `https://waze.com/ul?q=${encodeURIComponent(place.name + ' Miami')}&navigate=yes`
+
+  const directionsUrl = `https://www.google.com/maps/dir/580+72nd+St+Miami+Beach+FL+33141/${encodeURIComponent(
+    place.address && place.address !== 'À vérifier' ? place.address : place.name + ' Miami'
+  )}`
+
+  const deleteCustomPlace = () => {
+    setCustomPlaces(prev => prev.filter(p => p.id !== place.id))
+    goBack()
+  }
 
   const infoRows = [
     place.area && { icon: '📍', label: 'Zone', value: place.area },
@@ -613,6 +762,22 @@ function PlaceDetailScreen({ navigate, goBack, screenParams, favorites, setFavor
           </div>
         </Card>
 
+        {/* ITINÉRAIRE DEPUIS 72 PARK */}
+        <a href={directionsUrl} target="_blank" rel="noreferrer" style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          background: C.ocean + '10', border: `1px solid ${C.ocean}33`,
+          borderRadius: 14, padding: '12px 14px', textDecoration: 'none', marginBottom: 12,
+        }}>
+          <span style={{ fontSize: 22 }}>🚗</span>
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: 13, fontWeight: 700, color: C.ocean }}>Itinéraire depuis 72 Park</p>
+            <p style={{ fontSize: 11, color: C.muted, marginTop: 1 }}>
+              {place.distanceFrom72ParkMinutes ? `~${place.distanceFrom72ParkMinutes} min · ` : ''}Ouvre Google Maps →
+            </p>
+          </div>
+          <span style={{ fontSize: 18, color: C.ocean }}>↗</span>
+        </a>
+
         {/* QUICK ACTIONS */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 16 }}>
           {[
@@ -668,6 +833,17 @@ function PlaceDetailScreen({ navigate, goBack, screenParams, favorites, setFavor
                 : 'Statut cacher non confirmé. À vérifier directement avec le restaurant.'}
             </p>
           </div>
+        )}
+
+        {/* SUPPRIMER (lieux ajoutés manuellement) */}
+        {place.isCustom && (
+          <button onClick={deleteCustomPlace} className="press" style={{
+            width: '100%', background: C.dangerLight, border: `1px solid #FCA5A5`,
+            borderRadius: 14, padding: '14px', fontSize: 14, fontWeight: 600,
+            color: C.danger, marginTop: 4,
+          }}>
+            🗑 Supprimer ce lieu
+          </button>
         )}
       </div>
     </div>
@@ -1373,6 +1549,7 @@ export default function App() {
   const [expenses, setExpenses] = useLocalStorage('miami_expenses_v1', [])
   const [planningDone, setPlanningDone] = useLocalStorage('miami_planning_v1', {})
   const [favorites, setFavorites] = useLocalStorage('miami_favorites_v1', [])
+  const [customPlaces, setCustomPlaces] = useLocalStorage('miami_custom_places_v1', [])
 
   const navigate = useCallback((s, params = {}) => {
     setStack(prev => [...prev, { screen, params: screenParams }])
@@ -1392,7 +1569,7 @@ export default function App() {
   const TAB_SCREENS = ['home', 'planning', 'places', 'map', 'budget', 'checklist']
   const isTab = TAB_SCREENS.includes(screen)
 
-  const shared = { navigate, goBack, screenParams, checklistDone, setChecklistDone, expenses, setExpenses, planningDone, setPlanningDone, favorites, setFavorites }
+  const shared = { navigate, goBack, screenParams, checklistDone, setChecklistDone, expenses, setExpenses, planningDone, setPlanningDone, favorites, setFavorites, customPlaces, setCustomPlaces }
 
   return (
     <>
