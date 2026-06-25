@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo } from 'react'
 import {
   C, PLACES, PLANNING_DAYS, CHECKLIST_GROUPS, BUDGET_CATEGORIES,
   FIXED_BUDGET, TARGET_BUDGET, TRIP, SOS_CONTACTS, CAR_INFO, CAR_CHECKLIST,
-  DOCUMENTS_LIST,
+  DOCUMENTS_LIST, MIAMI_WEATHER,
 } from './data/miami'
 
 // ── LOCAL STORAGE HOOK ────────────────────────────────────────────────────────
@@ -164,8 +164,9 @@ function BottomNav({ current, navigate }) {
     { id: 'home', icon: '🏠', label: 'Accueil' },
     { id: 'planning', icon: '📅', label: 'Planning' },
     { id: 'places', icon: '📍', label: 'Lieux' },
+    { id: 'map', icon: '🗺', label: 'Carte' },
     { id: 'budget', icon: '💰', label: 'Budget' },
-    { id: 'checklist', icon: '✅', label: 'Check-list' },
+    { id: 'checklist', icon: '✅', label: 'Checks' },
   ]
   return (
     <div style={{
@@ -201,9 +202,12 @@ function HomeScreen({ navigate, expenses, checklistDone }) {
   const topPicks = PLACES.filter(p => p.personalRating === 5)
 
   const quickActions = [
+    { icon: '🤔', label: 'Concierge', action: () => navigate('concierge') },
     { icon: '🍽', label: 'Restaurants', action: () => navigate('places', { filter: 'restaurant' }) },
     { icon: '🎯', label: 'Activités', action: () => navigate('places', { filter: 'activity' }) },
     { icon: '🏖', label: 'Plages', action: () => navigate('places', { filter: 'beach' }) },
+    { icon: '✡️', label: 'Synagogues', action: () => navigate('places', { filter: 'synagogue' }) },
+    { icon: '🛒', label: 'Courses', action: () => navigate('places', { filter: 'supermarket' }) },
     { icon: '🚨', label: 'SOS', action: () => navigate('sos') },
     { icon: '🚗', label: 'Voiture', action: () => navigate('car') },
     { icon: '📄', label: 'Documents', action: () => navigate('documents') },
@@ -261,6 +265,55 @@ function HomeScreen({ navigate, expenses, checklistDone }) {
             </div>
           </Card>
         </div>
+
+        {/* MÉTÉO */}
+        <Card style={{ marginBottom: 16, padding: 14, background: 'linear-gradient(135deg, #0C6680 0%, #14B8A6 100%)', color: '#fff' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+            <div>
+              <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, opacity: 0.8 }}>MÉTÉO MIAMI — AOÛT</p>
+              <p style={{ fontSize: 28, fontWeight: 900, marginTop: 4, lineHeight: 1 }}>{MIAMI_WEATHER.tempMin}–{MIAMI_WEATHER.tempMax}°C</p>
+              <p style={{ fontSize: 12, opacity: 0.9, marginTop: 4 }}>🌊 Mer {MIAMI_WEATHER.seaTemp}°C</p>
+            </div>
+            <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 12, padding: '8px 12px', textAlign: 'right', backdropFilter: 'blur(8px)' }}>
+              <p style={{ fontSize: 11, opacity: 0.9 }}>☀️ UV Extrême (10-11)</p>
+              <p style={{ fontSize: 11, opacity: 0.9, marginTop: 4 }}>⛈ Orages 16h–18h</p>
+              <p style={{ fontSize: 11, opacity: 0.9, marginTop: 4 }}>💧 Humidité 75–85%</p>
+            </div>
+          </div>
+          <div style={{ background: 'rgba(255,255,255,0.12)', borderRadius: 10, padding: '8px 12px' }}>
+            {MIAMI_WEATHER.tips.slice(0, 3).map((tip, i) => (
+              <p key={i} style={{ fontSize: 11, opacity: 0.9, marginBottom: i < 2 ? 3 : 0 }}>{tip}</p>
+            ))}
+          </div>
+        </Card>
+
+        {/* PROGRAMME DU JOUR */}
+        {trip.status === 'ontrip' && (() => {
+          const today = PLANNING_DAYS[trip.tripDay - 1]
+          if (!today) return null
+          return (
+            <Card onClick={() => navigate('planning')} style={{ marginBottom: 16, background: `linear-gradient(135deg, ${C.sandLight}, ${C.turquoiseLight})` }}>
+              <p style={{ fontSize: 10, color: C.ocean, fontWeight: 700, letterSpacing: 1, marginBottom: 8 }}>PROGRAMME D'AUJOURD'HUI ☀️</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                <span style={{ fontSize: 26 }}>{today.themeIcon}</span>
+                <div>
+                  <p style={{ fontWeight: 700, fontSize: 15, color: C.ink }}>{today.title}</p>
+                  <p style={{ fontSize: 12, color: C.muted }}>{dateLabel(today.date)}</p>
+                </div>
+              </div>
+              {today.items.slice(0, 3).map(item => (
+                <div key={item.id} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
+                  <span style={{ fontSize: 15, flexShrink: 0 }}>{item.icon}</span>
+                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {item.time && <span style={{ fontSize: 10, color: C.ocean, fontWeight: 700, flexShrink: 0 }}>{item.time}</span>}
+                    <span style={{ fontSize: 13, color: C.ink }}>{item.title}</span>
+                  </div>
+                </div>
+              ))}
+              {today.items.length > 3 && <p style={{ fontSize: 12, color: C.muted, marginTop: 4 }}>+{today.items.length - 3} autres — Voir le planning →</p>}
+            </Card>
+          )
+        })()}
 
         {/* BUDGET FIXE */}
         <Card style={{ marginBottom: 16, padding: 14 }}>
@@ -423,6 +476,9 @@ const PLACE_FILTERS = [
   { id: 'shopping', label: '🛍 Shopping' },
   { id: 'beach', label: '🏖 Plages' },
   { id: 'beach_club', label: '🏊 Beach Club' },
+  { id: 'supermarket', label: '🛒 Courses' },
+  { id: 'synagogue', label: '✡️ Synagogues' },
+  { id: 'pharmacy', label: '💊 Pharmacies' },
 ]
 
 const KOSHER_FILTERS = [
@@ -613,6 +669,216 @@ function PlaceDetailScreen({ navigate, goBack, screenParams, favorites, setFavor
             </p>
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+// ── SCREEN: CONCIERGE ────────────────────────────────────────────────────────
+function ConciergeScreen({ navigate, goBack }) {
+  const [mode, setMode] = useState(null)
+
+  const modes = [
+    {
+      id: 'rain', icon: '🌧', label: 'Il pleut dehors', color: C.ocean,
+      description: 'Activités indoor & abritées',
+      placeIds: ['frost_museum', 'artechouse', 'aventura_mall', 'edition_bowling', 'childrens_museum', 'sawgrass_mills'],
+    },
+    {
+      id: 'tired', icon: '😴', label: 'Enfants fatigués', color: C.turquoise,
+      description: 'Proche du condo, calme',
+      placeIds: ['surfside_beach', 'publix_surfside', 'bal_harbour', 'four_seasons_surf_club', 'rustiko', 'cine_citta'],
+    },
+    {
+      id: 'evening', icon: '🌅', label: 'Belle soirée en famille', color: C.coral,
+      description: 'Les meilleures tables du soir',
+      placeIds: ['harbour_grill', 'g7_rooftop', 'asiatiko', 'fuego', 'neya', 'izzys_bbq'],
+    },
+    {
+      id: 'budget', icon: '💸', label: 'Budget serré', color: C.palm,
+      description: 'Gratuit ou économique',
+      placeIds: ['surfside_beach', 'wynwood', 'lincoln_road', 'jewish_museum', 'zack_baker', 'joe_juice'],
+    },
+  ]
+
+  const currentMode = modes.find(m => m.id === mode)
+  const modePlaces = currentMode
+    ? currentMode.placeIds.map(id => PLACES.find(p => p.id === id)).filter(Boolean)
+    : []
+
+  return (
+    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', background: C.bg }}>
+      <ScreenHeader title="🤔 Que fait-on ?" onBack={goBack} />
+      <div className="scroll-y" style={{ padding: '16px 16px', paddingBottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
+        <p style={{ fontSize: 13, color: C.muted, marginBottom: 14 }}>Quelle est votre situation en ce moment ?</p>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
+          {modes.map(m => (
+            <button key={m.id} onClick={() => setMode(mode === m.id ? null : m.id)} className="press" style={{
+              background: mode === m.id ? m.color : C.card,
+              color: mode === m.id ? '#fff' : C.ink,
+              border: `2px solid ${mode === m.id ? m.color : C.border}`,
+              borderRadius: 16, padding: '16px 10px',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+            }}>
+              <span style={{ fontSize: 28 }}>{m.icon}</span>
+              <span style={{ fontSize: 13, fontWeight: 700, textAlign: 'center' }}>{m.label}</span>
+              <span style={{ fontSize: 11, opacity: 0.75, textAlign: 'center' }}>{m.description}</span>
+            </button>
+          ))}
+        </div>
+
+        {currentMode && modePlaces.length > 0 && (
+          <>
+            <p style={{ fontSize: 11, color: C.muted, fontWeight: 700, letterSpacing: 1, marginBottom: 12 }}>
+              {currentMode.icon} SUGGESTIONS — {currentMode.description.toUpperCase()}
+            </p>
+            {modePlaces.map(p => (
+              <PlaceCard key={p.id} place={p} compact onPress={() => navigate('place_detail', { placeId: p.id })} />
+            ))}
+          </>
+        )}
+
+        {!mode && (
+          <div style={{ background: C.sandLight, borderRadius: 14, padding: '24px 16px', textAlign: 'center' }}>
+            <p style={{ fontSize: 36, marginBottom: 8 }}>🌴</p>
+            <p style={{ fontSize: 15, fontWeight: 700, color: C.ink }}>Choisissez votre situation</p>
+            <p style={{ fontSize: 13, color: C.muted, marginTop: 6 }}>Des suggestions adaptées s'afficheront ici.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── MAP DATA ──────────────────────────────────────────────────────────────────
+const MAP_ZONES = [
+  {
+    id: 'surfside', name: 'Surfside / North Beach', icon: '🏠', color: C.ocean,
+    subtitle: 'Notre base — 72 Park',
+    mapsUrl: 'https://maps.google.com/?q=Surfside+Beach+Miami+FL',
+    placeIds: ['surfside_beach', 'four_seasons_surf_club', 'the_shul', 'young_israel_bh', 'cvs_surfside_24h', 'publix_surfside', 'whole_foods_surfside', 'bal_harbour', 'makoto', 'rustiko', 'harbour_grill', 'hadekel'],
+  },
+  {
+    id: 'mid_south_beach', name: 'Mid & South Beach', icon: '🌊', color: C.turquoise,
+    subtitle: 'Collins Ave — Art Déco & Lincoln Rd',
+    mapsUrl: 'https://maps.google.com/?q=South+Beach+Miami+FL',
+    placeIds: ['faena', 'artechouse', 'edition_bowling', 'lincoln_road', 'jewish_museum', 'joe_stone_crab', 'setai', 'w_south_beach', '1_hotel', 'japon_setai', 'mila', 'contessa'],
+  },
+  {
+    id: 'wynwood_midtown', name: 'Wynwood / Midtown', icon: '🎨', color: C.coral,
+    subtitle: 'Street art & restaurants branchés',
+    mapsUrl: 'https://maps.google.com/?q=Wynwood+Miami+FL',
+    placeIds: ['wynwood', 'zack_baker', 'fuego', 'motek', 'uchi', 'kiki', 'hiyakawa'],
+  },
+  {
+    id: 'design_brickell', name: 'Design District / Brickell', icon: '🏙', color: C.purple,
+    subtitle: 'Luxe, culture & gastronomie',
+    mapsUrl: 'https://maps.google.com/?q=Miami+Design+District+FL',
+    placeIds: ['design_district', 'frost_museum', 'childrens_museum', 'carbone', 'cipriani', 'cote_miami', 'komodo', 'mandolin', 'sparrow_italia', 'forte_dei_marmi', 'brickell'],
+  },
+  {
+    id: 'aventura', name: 'Aventura & Hallandale', icon: '🛍', color: C.gold,
+    subtitle: 'Shopping, grands restaurants',
+    mapsUrl: 'https://maps.google.com/?q=Aventura+Mall+FL',
+    placeIds: ['aventura_mall', 'whole_foods_aventura', 'g7_rooftop', 'neya', 'asiatiko', 'malka'],
+  },
+  {
+    id: 'excursions', name: 'Excursions', icon: '🗺', color: C.palm,
+    subtitle: 'Keys, Everglades, Zoo — 1h+ de route',
+    mapsUrl: 'https://maps.google.com/?q=Everglades+National+Park+FL',
+    placeIds: ['everglades', 'key_largo', 'islamorada', 'zoo_miami', 'sawgrass_mills', 'ritz_key_biscayne'],
+  },
+]
+
+// ── SCREEN: MAP ───────────────────────────────────────────────────────────────
+function MapScreen({ navigate }) {
+  const [openZone, setOpenZone] = useState(null)
+
+  return (
+    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', background: C.bg }}>
+      <div style={{
+        paddingTop: 'max(env(safe-area-inset-top), 16px)',
+        padding: `max(env(safe-area-inset-top), 16px) 16px 14px`,
+        background: C.card, borderBottom: `1px solid ${C.border}`, flexShrink: 0,
+      }}>
+        <h2 style={{ fontSize: 17, fontWeight: 700 }}>🗺 Carte — Zones Miami</h2>
+        <p style={{ fontSize: 12, color: C.muted, marginTop: 4 }}>Explorez les zones, ouvrez dans Google Maps</p>
+      </div>
+
+      <div style={{ background: `linear-gradient(135deg, ${C.ocean}, ${C.turquoise})`, padding: '12px 16px', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ flex: 1, background: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: '8px 12px', backdropFilter: 'blur(8px)' }}>
+            <p style={{ fontSize: 10, color: '#fff', fontWeight: 700, opacity: 0.8 }}>🏠 NOTRE BASE</p>
+            <p style={{ fontSize: 13, color: '#fff', fontWeight: 600, marginTop: 2 }}>72 Park · 580 72nd St, Surfside</p>
+          </div>
+          <a href={TRIP.mapsUrl} target="_blank" rel="noreferrer"
+            style={{ background: 'rgba(255,255,255,0.95)', color: C.ocean, borderRadius: 10, padding: '10px 14px', fontSize: 13, fontWeight: 700, textDecoration: 'none', flexShrink: 0 }}>
+            📍 Maps
+          </a>
+        </div>
+      </div>
+
+      <div className="scroll-y" style={{ padding: '12px 16px', paddingBottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
+        {MAP_ZONES.map(zone => {
+          const isOpen = openZone === zone.id
+          const zonePlaces = zone.placeIds.map(id => PLACES.find(p => p.id === id)).filter(Boolean)
+
+          return (
+            <div key={zone.id} style={{ marginBottom: 10 }}>
+              <button onClick={() => setOpenZone(isOpen ? null : zone.id)} className="press" style={{
+                width: '100%', background: C.card,
+                borderRadius: isOpen ? '16px 16px 0 0' : 16,
+                border: `2px solid ${isOpen ? zone.color : C.border}`,
+                borderBottom: isOpen ? 'none' : undefined,
+                padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12,
+                boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+              }}>
+                <div style={{ background: zone.color + '22', width: 44, height: 44, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>
+                  {zone.icon}
+                </div>
+                <div style={{ flex: 1, textAlign: 'left' }}>
+                  <p style={{ fontWeight: 700, fontSize: 15, color: C.ink }}>{zone.name}</p>
+                  <p style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{zone.subtitle} · {zonePlaces.length} lieux</p>
+                </div>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+                  <a href={zone.mapsUrl} target="_blank" rel="noreferrer"
+                    onClick={e => e.stopPropagation()}
+                    style={{ background: zone.color, color: '#fff', borderRadius: 8, padding: '6px 10px', fontSize: 12, fontWeight: 600, textDecoration: 'none' }}>
+                    Maps
+                  </a>
+                  <span style={{ color: C.muted, fontSize: 12 }}>{isOpen ? '▲' : '▼'}</span>
+                </div>
+              </button>
+
+              {isOpen && (
+                <div style={{
+                  background: C.card, borderRadius: '0 0 16px 16px',
+                  border: `2px solid ${zone.color}`, borderTop: 'none',
+                  padding: '4px 12px 12px',
+                }}>
+                  {zonePlaces.map((place, i) => (
+                    <div key={place.id} onClick={() => navigate('place_detail', { placeId: place.id })} className="press"
+                      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 4px', borderBottom: i < zonePlaces.length - 1 ? `1px solid ${C.borderLight}` : 'none' }}>
+                      <div style={{ flex: 1 }}>
+                        <p style={{ fontWeight: 600, fontSize: 14, color: C.ink }}>{place.name}</p>
+                        <p style={{ fontSize: 12, color: C.muted }}>{place.area}</p>
+                      </div>
+                      {place.mustBook && <span style={{ fontSize: 11, color: C.coral, fontWeight: 700 }}>📅</span>}
+                      <a href={place.address && place.address !== 'À vérifier'
+                        ? `https://maps.google.com/?q=${encodeURIComponent(place.name + ' ' + place.address)}`
+                        : `https://maps.google.com/?q=${encodeURIComponent(place.name + ' Miami')}`}
+                        target="_blank" rel="noreferrer"
+                        onClick={e => e.stopPropagation()}
+                        style={{ background: C.mutedLight, color: C.ocean, borderRadius: 8, padding: '6px 10px', fontSize: 13, fontWeight: 600, textDecoration: 'none', flexShrink: 0 }}>
+                        📍
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )
+        })}
       </div>
     </div>
   )
@@ -1123,7 +1389,7 @@ export default function App() {
     }
   }, [stack])
 
-  const TAB_SCREENS = ['home', 'planning', 'places', 'budget', 'checklist']
+  const TAB_SCREENS = ['home', 'planning', 'places', 'map', 'budget', 'checklist']
   const isTab = TAB_SCREENS.includes(screen)
 
   const shared = { navigate, goBack, screenParams, checklistDone, setChecklistDone, expenses, setExpenses, planningDone, setPlanningDone, favorites, setFavorites }
@@ -1138,6 +1404,8 @@ export default function App() {
         {screen === 'budget'       && <BudgetScreen {...shared} />}
         {screen === 'checklist'    && <ChecklistScreen {...shared} />}
         {screen === 'place_detail' && <PlaceDetailScreen {...shared} />}
+        {screen === 'concierge'    && <ConciergeScreen {...shared} />}
+        {screen === 'map'          && <MapScreen {...shared} />}
         {screen === 'sos'          && <SOSScreen {...shared} />}
         {screen === 'car'          && <CarScreen {...shared} />}
         {screen === 'documents'    && <DocumentsScreen {...shared} />}
