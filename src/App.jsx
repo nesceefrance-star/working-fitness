@@ -59,9 +59,9 @@ function GlobalStyles() {
   return <style>{`
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-    html { height: 100%; height: -webkit-fill-available; background: ${C.bg}; }
-    body { height: 100%; min-height: -webkit-fill-available; background: ${C.bg}; font-family: 'Inter', -apple-system, sans-serif; color: ${C.ink}; -webkit-text-size-adjust: 100%; overscroll-behavior: none; }
-    #root { height: 100%; display: flex; flex-direction: column; }
+    html { overflow: hidden; height: 100%; background: ${C.bg}; }
+    body { overflow: hidden; height: 100%; background: ${C.bg}; font-family: 'Inter', -apple-system, sans-serif; color: ${C.ink}; -webkit-text-size-adjust: 100%; overscroll-behavior: none; }
+    #root { position: fixed; inset: 0; display: flex; flex-direction: column; }
     input, button, textarea, select { font-family: inherit; }
     ::-webkit-scrollbar { width: 2px; }
     ::-webkit-scrollbar-thumb { background: ${C.border}; }
@@ -172,7 +172,7 @@ function BottomNav({ current, navigate }) {
       background: C.card, borderTop: `1px solid ${C.border}`,
       paddingBottom: 'env(safe-area-inset-bottom)',
       display: 'flex', justifyContent: 'space-around',
-      position: 'sticky', bottom: 0, zIndex: 20, flexShrink: 0,
+      flexShrink: 0, zIndex: 20,
     }}>
       {tabs.map(t => (
         <button key={t.id} onClick={() => navigate(t.id)} className="press" style={{
@@ -241,7 +241,7 @@ function HomeScreen({ navigate, expenses, checklistDone }) {
         </div>
       </div>
 
-      <div style={{ padding: 'calc(env(safe-area-inset-bottom) + 80px) 16px 16px', paddingTop: 16 }}>
+      <div style={{ padding: 16, paddingBottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
         {/* STATS ROW */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
           <Card onClick={() => navigate('budget')} style={{ padding: 14 }}>
@@ -1131,20 +1131,18 @@ export default function App() {
   return (
     <>
       <GlobalStyles />
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: C.bg, maxWidth: 500, margin: '0 auto', boxShadow: '0 0 40px rgba(0,0,0,0.1)' }}>
-        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-          {screen === 'home'         && <HomeScreen {...shared} />}
-          {screen === 'planning'     && <PlanningScreen {...shared} />}
-          {screen === 'places'       && <PlacesScreen {...shared} params={screenParams} />}
-          {screen === 'budget'       && <BudgetScreen {...shared} />}
-          {screen === 'checklist'    && <ChecklistScreen {...shared} />}
-          {screen === 'place_detail' && <PlaceDetailScreen {...shared} />}
-          {screen === 'sos'          && <SOSScreen {...shared} />}
-          {screen === 'car'          && <CarScreen {...shared} />}
-          {screen === 'documents'    && <DocumentsScreen {...shared} />}
-        </div>
-        {isTab && <BottomNav current={screen} navigate={s => { setStack([]); setScreen(s); setScreenParams({}) }} />}
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', background: C.bg }}>
+        {screen === 'home'         && <HomeScreen {...shared} />}
+        {screen === 'planning'     && <PlanningScreen {...shared} />}
+        {screen === 'places'       && <PlacesScreen {...shared} params={screenParams} />}
+        {screen === 'budget'       && <BudgetScreen {...shared} />}
+        {screen === 'checklist'    && <ChecklistScreen {...shared} />}
+        {screen === 'place_detail' && <PlaceDetailScreen {...shared} />}
+        {screen === 'sos'          && <SOSScreen {...shared} />}
+        {screen === 'car'          && <CarScreen {...shared} />}
+        {screen === 'documents'    && <DocumentsScreen {...shared} />}
       </div>
+      {isTab && <BottomNav current={screen} navigate={s => { setStack([]); setScreen(s); setScreenParams({}) }} />}
     </>
   )
 }
