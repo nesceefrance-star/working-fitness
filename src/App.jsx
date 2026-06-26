@@ -271,13 +271,14 @@ function HomeScreen({ navigate, expenses, checklistDone }) {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
             <div>
               <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, opacity: 0.8 }}>MÉTÉO MIAMI — AOÛT</p>
-              <p style={{ fontSize: 28, fontWeight: 900, marginTop: 4, lineHeight: 1 }}>{MIAMI_WEATHER.tempMin}–{MIAMI_WEATHER.tempMax}°C</p>
+              <p style={{ fontSize: 26, fontWeight: 900, marginTop: 4, lineHeight: 1 }}>{MIAMI_WEATHER.tempMin}–{MIAMI_WEATHER.tempMax}°C</p>
+              <p style={{ fontSize: 11, opacity: 0.75, marginTop: 3 }}>Ressenti jusqu'à {MIAMI_WEATHER.feelsLike}°C</p>
               <p style={{ fontSize: 12, opacity: 0.9, marginTop: 4 }}>🌊 Mer {MIAMI_WEATHER.seaTemp}°C</p>
             </div>
             <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 12, padding: '8px 12px', textAlign: 'right', backdropFilter: 'blur(8px)' }}>
-              <p style={{ fontSize: 11, opacity: 0.9 }}>☀️ UV Extrême (10-11)</p>
-              <p style={{ fontSize: 11, opacity: 0.9, marginTop: 4 }}>⛈ Orages 16h–18h</p>
-              <p style={{ fontSize: 11, opacity: 0.9, marginTop: 4 }}>💧 Humidité 75–85%</p>
+              <p style={{ fontSize: 11, opacity: 0.9 }}>☀️ {MIAMI_WEATHER.uvIndex}</p>
+              <p style={{ fontSize: 11, opacity: 0.9, marginTop: 4 }}>🌧 {MIAMI_WEATHER.rain.split('·')[0].trim()}</p>
+              <p style={{ fontSize: 11, opacity: 0.9, marginTop: 4 }}>💧 {MIAMI_WEATHER.humidity.split('·')[0].trim()}</p>
             </div>
           </div>
           <div style={{ background: 'rgba(255,255,255,0.12)', borderRadius: 10, padding: '8px 12px' }}>

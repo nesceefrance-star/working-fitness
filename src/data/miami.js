@@ -42,16 +42,16 @@ export const TRIP = {
 }
 
 export const MIAMI_WEATHER = {
-  month: 'Août', tempMin: 27, tempMax: 34, seaTemp: 29,
-  humidity: 'Élevée (75-85%)',
-  rain: 'Orages fréquents en fin d\'après-midi (16h-18h)',
+  month: 'Août', tempMin: 28, tempMax: 31, feelsLike: 37, seaTemp: 30,
+  humidity: '86% le matin · 65% l\'après-midi (moy. 72%)',
+  rain: 'Mois le + pluvieux (22 j/mois) · Orages l\'après-midi',
   uvIndex: 'Extrême (10-11)',
   tips: [
-    '🌅 Plage le matin avant 12h — Meilleur créneau',
-    '🏠 Repos / indoor 13h-16h — Chaleur maximale',
-    '⛈ Orages possibles 16h-18h — Prévoir plan B indoor',
-    '🧴 Crème SPF 50 + casquette obligatoires',
-    '💧 Eau fraîche partout, surtout pour les enfants',
+    '🌅 Plage le matin avant 12h — Meilleur créneau soleil',
+    '🏠 Repos / indoor 13h-16h — Ressenti jusqu\'à 37°C',
+    '⛈ Orages probables l\'après-midi — Prévoir plan B indoor',
+    '🧴 SPF 50 + casquette obligatoires (UV extrême)',
+    '💧 Hydratation ++, surtout pour les enfants',
   ],
   indoorPlaces: ['frost_museum', 'artechouse', 'aventura_mall', 'edition_bowling', 'childrens_museum', 'sawgrass_mills'],
 }
