@@ -190,7 +190,7 @@ function BottomNav({ current, navigate }) {
 }
 
 // ── SCREEN: HOME ─────────────────────────────────────────────────────────────
-function HomeScreen({ navigate, expenses, checklistDone }) {
+function HomeScreen({ navigate, expenses, checklistDone, planningItems = {} }) {
   const trip = getDaysUntilTrip()
   const totalExpenses = useMemo(() => expenses.reduce((s, e) => s + (e.currency === 'EUR' ? e.amount : e.amount / 1.1), 0), [expenses])
   const totalAll = FIXED_BUDGET.total + totalExpenses
@@ -292,6 +292,7 @@ function HomeScreen({ navigate, expenses, checklistDone }) {
         {trip.status === 'ontrip' && (() => {
           const today = PLANNING_DAYS[trip.tripDay - 1]
           if (!today) return null
+          const todayItems = planningItems[today.id] || []
           return (
             <Card onClick={() => navigate('planning')} style={{ marginBottom: 16, background: `linear-gradient(135deg, ${C.sandLight}, ${C.turquoiseLight})` }}>
               <p style={{ fontSize: 10, color: C.ocean, fontWeight: 700, letterSpacing: 1, marginBottom: 8 }}>PROGRAMME D'AUJOURD'HUI ☀️</p>
@@ -302,16 +303,20 @@ function HomeScreen({ navigate, expenses, checklistDone }) {
                   <p style={{ fontSize: 12, color: C.muted }}>{dateLabel(today.date)}</p>
                 </div>
               </div>
-              {today.items.slice(0, 3).map(item => (
+              {todayItems.length === 0 && (
+                <p style={{ fontSize: 13, color: C.muted, fontStyle: 'italic' }}>Aucune activité planifiée — Ouvrir le planning →</p>
+              )}
+              {todayItems.slice(0, 4).map(item => (
                 <div key={item.id} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
                   <span style={{ fontSize: 15, flexShrink: 0 }}>{item.icon}</span>
-                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                     {item.time && <span style={{ fontSize: 10, color: C.ocean, fontWeight: 700, flexShrink: 0 }}>{item.time}</span>}
-                    <span style={{ fontSize: 13, color: C.ink }}>{item.title}</span>
+                    <span style={{ fontSize: 13, color: item.done ? C.muted : C.ink, textDecoration: item.done ? 'line-through' : 'none' }}>{item.name}</span>
+                    {item.reserved && <span style={{ fontSize: 10, color: C.success, fontWeight: 700 }}>📅</span>}
                   </div>
                 </div>
               ))}
-              {today.items.length > 3 && <p style={{ fontSize: 12, color: C.muted, marginTop: 4 }}>+{today.items.length - 3} autres — Voir le planning →</p>}
+              {todayItems.length > 4 && <p style={{ fontSize: 12, color: C.muted, marginTop: 4 }}>+{todayItems.length - 4} autres — Voir le planning →</p>}
             </Card>
           )
         })()}
@@ -377,32 +382,207 @@ function HomeScreen({ navigate, expenses, checklistDone }) {
   )
 }
 
+// ── TIME SLOTS ─────────────────────────────────────────────────────────────────
+const TIME_SLOTS = ['', 'Matin', '9h', '10h', '11h', '12h', '13h', '14h', '15h', '16h', '17h', '18h', '19h', '20h', '21h', 'Soirée']
+
+function categoryToIcon(cat) {
+  const m = { restaurant: '🍽', breakfast: '☕', activity: '🎯', beach: '🏖', beach_club: '🏊', shopping: '🛍', supermarket: '🛒', synagogue: '✡️', pharmacy: '💊', other: '📌' }
+  return m[cat] || '📌'
+}
+
+// ── SHEET: ADD PLAN ITEM ──────────────────────────────────────────────────────
+function AddPlanItemSheet({ day, onAdd, onClose, customPlaces = [] }) {
+  const [tab, setTab] = useState('place')
+  const [search, setSearch] = useState('')
+  const [catFilter, setCatFilter] = useState('all')
+  const [selectedPlace, setSelectedPlace] = useState(null)
+  const [freeText, setFreeText] = useState('')
+  const [freeIcon, setFreeIcon] = useState('📌')
+  const [time, setTime] = useState('')
+  const [reserved, setReserved] = useState(false)
+  const [resNote, setResNote] = useState('')
+
+  const dayData = PLANNING_DAYS.find(d => d.id === day.id)
+  const suggestions = dayData?.items || []
+  const allPlaces = useMemo(() => [...PLACES, ...customPlaces], [customPlaces])
+  const filteredPlaces = useMemo(() => allPlaces.filter(p => {
+    if (catFilter !== 'all' && p.category !== catFilter) return false
+    if (search && !p.name.toLowerCase().includes(search.toLowerCase()) && !p.area?.toLowerCase().includes(search.toLowerCase())) return false
+    return true
+  }).slice(0, 40), [allPlaces, catFilter, search])
+
+  const canAdd = tab === 'place' ? !!selectedPlace : !!freeText.trim()
+  const mkId = () => `p_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`
+
+  const doAdd = (item) => { onAdd(item); onClose() }
+
+  const handleAdd = () => {
+    if (!canAdd) return
+    doAdd({
+      id: mkId(), time, reserved,
+      reservationNote: resNote.trim() || undefined,
+      done: false,
+      ...(tab === 'place' && selectedPlace
+        ? { placeId: selectedPlace.id, name: selectedPlace.name, icon: categoryToIcon(selectedPlace.category) }
+        : { isCustomText: true, name: freeText.trim(), icon: freeIcon }),
+    })
+  }
+
+  const addSuggestion = (s) => doAdd({
+    id: mkId(), time: s.time || '', reserved: false, done: false,
+    name: s.title, icon: s.icon || '📌',
+    placeId: s.placeId || undefined,
+    isCustomText: !s.placeId,
+  })
+
+  const QICONS = ['🍽', '☕', '🎯', '🏖', '🏊', '🛍', '🛒', '✡️', '💊', '🎪', '🚗', '✈️', '🌊', '📌', '🏙', '🎨', '🎬', '🏀']
+  const CAT_FILTERS = [
+    { id: 'all', label: 'Tous' }, { id: 'restaurant', label: '🍽 Restau.' },
+    { id: 'breakfast', label: '☕ Petit-dèj' }, { id: 'activity', label: '🎯 Activités' },
+    { id: 'beach', label: '🏖 Plages' }, { id: 'beach_club', label: '🏊 Beach Club' },
+  ]
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.55)', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+      <div style={{ background: C.card, borderRadius: '20px 20px 0 0', maxHeight: '92vh', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '18px 16px 12px', borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <h2 style={{ fontSize: 17, fontWeight: 800 }}>➕ Ajouter — {day.label}</h2>
+            <button onClick={onClose} style={{ background: C.mutedLight, border: 'none', borderRadius: 10, padding: '6px 12px', fontSize: 13, fontWeight: 600, color: C.ink }}>✕</button>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {[['place', '📍 Depuis un lieu'], ['text', '✏️ Texte libre']].map(([id, lbl]) => (
+              <button key={id} onClick={() => setTab(id)} style={{ flex: 1, padding: 9, borderRadius: 10, border: 'none', fontWeight: 700, fontSize: 14, background: tab === id ? C.ocean : C.mutedLight, color: tab === id ? '#fff' : C.muted }}>{lbl}</button>
+            ))}
+          </div>
+        </div>
+
+        <div className="scroll-y" style={{ flex: 1, padding: '14px 16px' }}>
+          <label style={LBL}>Horaire</label>
+          <select style={{ ...INP, marginBottom: 14 }} value={time} onChange={e => setTime(e.target.value)}>
+            {TIME_SLOTS.map(s => <option key={s} value={s}>{s || '— Sans horaire —'}</option>)}
+          </select>
+
+          {tab === 'place' && (<>
+            {suggestions.length > 0 && !search && !selectedPlace && (
+              <div style={{ marginBottom: 16 }}>
+                <p style={{ fontSize: 11, color: C.ocean, fontWeight: 700, letterSpacing: 0.5, marginBottom: 8 }}>SUGGESTIONS POUR CE JOUR</p>
+                {suggestions.map(s => (
+                  <button key={s.id} onClick={() => addSuggestion(s)} className="press" style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', marginBottom: 6, background: C.sandLight, borderRadius: 12, border: 'none', textAlign: 'left' }}>
+                    <span style={{ fontSize: 20 }}>{s.icon}</span>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ fontSize: 14, fontWeight: 600, color: C.ink }}>{s.title}</p>
+                      {s.time && <p style={{ fontSize: 11, color: C.ocean, fontWeight: 700 }}>{s.time}</p>}
+                    </div>
+                    <span style={{ fontSize: 18, color: C.success, fontWeight: 700 }}>+</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {selectedPlace ? (
+              <div style={{ background: C.ocean + '15', border: `1px solid ${C.ocean}44`, borderRadius: 12, padding: '10px 12px', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 22 }}>{categoryToIcon(selectedPlace.category)}</span>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontWeight: 700, fontSize: 14, color: C.ocean }}>{selectedPlace.name}</p>
+                  <p style={{ fontSize: 12, color: C.muted }}>{selectedPlace.area}</p>
+                </div>
+                <button onClick={() => setSelectedPlace(null)} style={{ background: 'none', border: 'none', color: C.muted, fontSize: 18 }}>✕</button>
+              </div>
+            ) : (<>
+              <input placeholder="🔍 Rechercher un lieu…" value={search} onChange={e => setSearch(e.target.value)} style={{ ...INP, marginBottom: 10 }} />
+              <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 10 }}>
+                {CAT_FILTERS.map(f => <Pill key={f.id} label={f.label} active={catFilter === f.id} onClick={() => setCatFilter(f.id)} />)}
+              </div>
+              <div style={{ marginBottom: 12 }}>
+                {filteredPlaces.map(p => (
+                  <button key={p.id} onClick={() => setSelectedPlace(p)} className="press" style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', marginBottom: 6, background: C.mutedLight, borderRadius: 12, border: 'none', textAlign: 'left' }}>
+                    <span style={{ fontSize: 20 }}>{categoryToIcon(p.category)}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontWeight: 600, fontSize: 14, color: C.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</p>
+                      <p style={{ fontSize: 11, color: C.muted }}>{p.area}</p>
+                    </div>
+                    {p.mustBook && <span style={{ fontSize: 11, color: C.coral, fontWeight: 700, flexShrink: 0 }}>📅</span>}
+                  </button>
+                ))}
+              </div>
+            </>)}
+          </>)}
+
+          {tab === 'text' && (<>
+            <label style={LBL}>Description</label>
+            <input style={{ ...INP, marginBottom: 14 }} placeholder="Ex: Baignade, Repos, Supermarché Publix…" value={freeText} onChange={e => setFreeText(e.target.value)} />
+            <label style={LBL}>Icône</label>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+              {QICONS.map(ic => (
+                <button key={ic} onClick={() => setFreeIcon(ic)} style={{ fontSize: 22, padding: 6, borderRadius: 8, border: `2px solid ${freeIcon === ic ? C.ocean : 'transparent'}`, background: freeIcon === ic ? C.ocean + '15' : C.mutedLight }}>
+                  {ic}
+                </button>
+              ))}
+            </div>
+          </>)}
+
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderTop: `1px solid ${C.borderLight}` }}>
+            <div>
+              <p style={{ fontSize: 14, fontWeight: 700, color: C.ink }}>📅 Réservation confirmée</p>
+              <p style={{ fontSize: 12, color: C.muted }}>Cocher si déjà réservé</p>
+            </div>
+            <button onClick={() => setReserved(r => !r)} style={{ width: 48, height: 28, borderRadius: 14, border: 'none', padding: 3, background: reserved ? C.success : C.mutedLight, transition: 'background .2s', display: 'flex', alignItems: 'center' }}>
+              <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#fff', transition: 'transform .2s', transform: reserved ? 'translateX(20px)' : 'translateX(0)' }} />
+            </button>
+          </div>
+          {reserved && (
+            <input style={{ ...INP, marginBottom: 14 }} placeholder="Référence / heure / note de réservation…" value={resNote} onChange={e => setResNote(e.target.value)} />
+          )}
+        </div>
+
+        <div style={{ padding: '12px 16px', paddingBottom: 'calc(12px + env(safe-area-inset-bottom))', borderTop: `1px solid ${C.border}`, flexShrink: 0 }}>
+          <button onClick={handleAdd} disabled={!canAdd} style={{ width: '100%', background: canAdd ? C.ocean : C.mutedLight, color: canAdd ? '#fff' : C.muted, border: 'none', borderRadius: 14, padding: 16, fontSize: 16, fontWeight: 700 }}>
+            Ajouter au planning
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── SCREEN: PLANNING ──────────────────────────────────────────────────────────
-function PlanningScreen({ navigate, planningDone, setPlanningDone }) {
+function PlanningScreen({ navigate, planningItems = {}, setPlanningItems, customPlaces = [] }) {
   const [openDay, setOpenDay] = useState(null)
+  const [addingToDay, setAddingToDay] = useState(null)
+  const [expandedItem, setExpandedItem] = useState(null)
   const trip = getDaysUntilTrip()
 
-  const toggleItem = (itemId) => setPlanningDone(d => ({ ...d, [itemId]: !d[itemId] }))
+  const addItem = (dayId, item) => setPlanningItems(prev => ({ ...prev, [dayId]: [...(prev[dayId] || []), item] }))
+  const toggleDone = (dayId, itemId) => setPlanningItems(prev => ({ ...prev, [dayId]: (prev[dayId] || []).map(i => i.id === itemId ? { ...i, done: !i.done } : i) }))
+  const toggleReserved = (dayId, itemId) => setPlanningItems(prev => ({ ...prev, [dayId]: (prev[dayId] || []).map(i => i.id === itemId ? { ...i, reserved: !i.reserved } : i) }))
+  const deleteItem = (dayId, itemId) => { setPlanningItems(prev => ({ ...prev, [dayId]: (prev[dayId] || []).filter(i => i.id !== itemId) })); setExpandedItem(null) }
+  const updateResNote = (dayId, itemId, note) => setPlanningItems(prev => ({ ...prev, [dayId]: (prev[dayId] || []).map(i => i.id === itemId ? { ...i, reservationNote: note } : i) }))
 
-  const themeColors = {
-    voyage: C.ocean, plage: C.turquoise, shopping: C.coral,
-    enfants: C.gold, keys: C.palm, everglades: C.palm,
-    indoor: C.purple, repos: C.muted,
-  }
+  const themeColors = { voyage: C.ocean, plage: C.turquoise, shopping: C.coral, enfants: C.gold, keys: C.palm, everglades: C.palm, indoor: C.purple, repos: C.muted }
+  const totalPlanned = Object.values(planningItems).reduce((s, a) => s + a.length, 0)
+  const totalDone = Object.values(planningItems).flat().filter(i => i.done).length
 
   return (
     <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', background: C.bg }}>
-      <ScreenHeader title="Planning — 17 jours" />
+      <div style={{ paddingTop: 'max(env(safe-area-inset-top), 16px)', padding: `max(env(safe-area-inset-top), 16px) 16px 14px`, background: C.card, borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
+        <h2 style={{ fontSize: 17, fontWeight: 700, marginBottom: 4 }}>📅 Planning — 17 jours</h2>
+        <p style={{ fontSize: 12, color: C.muted }}>
+          {totalPlanned > 0 ? `${totalPlanned} activités planifiées · ${totalDone} réalisées` : 'Composez votre planning jour par jour ↓'}
+        </p>
+      </div>
       <div className="scroll-y" style={{ flex: 1, padding: '12px 16px', paddingBottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
         {PLANNING_DAYS.map((day, idx) => {
           const isOpen = openDay === day.id
-          const doneItems = day.items.filter(i => planningDone[i.id])
+          const items = planningItems[day.id] || []
+          const doneCount = items.filter(i => i.done).length
+          const resCount = items.filter(i => i.reserved).length
           const themeColor = themeColors[day.theme] || C.muted
           const isCurrentDay = trip.status === 'ontrip' && trip.tripDay === idx + 1
 
           return (
             <div key={day.id} style={{ marginBottom: 8 }}>
-              <button onClick={() => setOpenDay(isOpen ? null : day.id)} className="press" style={{
+              <button onClick={() => { setOpenDay(isOpen ? null : day.id); setExpandedItem(null) }} className="press" style={{
                 width: '100%', background: C.card, borderRadius: isOpen ? '16px 16px 0 0' : 16,
                 border: `1px solid ${isCurrentDay ? C.ocean : C.border}`,
                 borderBottom: isOpen ? 'none' : undefined,
@@ -418,52 +598,95 @@ function PlanningScreen({ navigate, planningDone, setPlanningDone }) {
                   <p style={{ fontSize: 15, fontWeight: 700, color: C.ink }}>{day.title}</p>
                   <p style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{dateLabel(day.date)}</p>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3, flexShrink: 0 }}>
                   <span style={{ fontSize: 13, color: C.muted }}>{isOpen ? '▲' : '▼'}</span>
-                  {doneItems.length > 0 && (
-                    <span style={{ fontSize: 10, color: C.success, fontWeight: 700 }}>{doneItems.length}/{day.items.length} ✓</span>
-                  )}
+                  {items.length > 0 && <span style={{ fontSize: 10, color: C.ocean, fontWeight: 700 }}>{doneCount}/{items.length} ✓</span>}
+                  {resCount > 0 && <span style={{ fontSize: 10, color: C.success, fontWeight: 700 }}>📅 {resCount}</span>}
                 </div>
               </button>
 
               {isOpen && (
-                <div style={{
-                  background: C.card, borderRadius: '0 0 16px 16px',
-                  border: `1px solid ${C.border}`, borderTop: 'none',
-                  padding: '4px 16px 16px',
-                }}>
+                <div style={{ background: C.card, borderRadius: '0 0 16px 16px', border: `1px solid ${C.border}`, borderTop: 'none', padding: '8px 16px 14px' }}>
                   {day.notes && (
                     <div style={{ background: C.sandLight, borderRadius: 10, padding: '10px 12px', marginBottom: 12, fontSize: 13, color: C.inkLight }}>
                       💡 {day.notes}
                     </div>
                   )}
-                  {day.items.map(item => (
-                    <div key={item.id} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '10px 0', borderBottom: `1px solid ${C.borderLight}` }}>
-                      <button onClick={() => toggleItem(item.id)} style={{
-                        width: 24, height: 24, borderRadius: 6, flexShrink: 0,
-                        background: planningDone[item.id] ? C.success : C.mutedLight,
-                        border: `1px solid ${planningDone[item.id] ? C.success : C.border}`,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 13, color: '#fff', marginTop: 1,
-                      }}>{planningDone[item.id] ? '✓' : ''}</button>
-                      <div style={{ flex: 1 }}>
-                        {item.time && <p style={{ fontSize: 10, color: C.ocean, fontWeight: 700, marginBottom: 2 }}>{item.time.toUpperCase()}</p>}
-                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                          <span>{item.icon}</span>
-                          <p style={{ fontSize: 14, fontWeight: planningDone[item.id] ? 400 : 600, color: planningDone[item.id] ? C.muted : C.ink, textDecoration: planningDone[item.id] ? 'line-through' : 'none' }}>{item.title}</p>
+
+                  {items.length === 0 && (
+                    <div style={{ padding: '16px 0', textAlign: 'center', color: C.muted }}>
+                      <p style={{ fontSize: 24, marginBottom: 4 }}>✨</p>
+                      <p style={{ fontSize: 13, fontWeight: 600 }}>Journée libre</p>
+                      <p style={{ fontSize: 12, marginTop: 2 }}>Appuyez sur ➕ pour ajouter des activités</p>
+                    </div>
+                  )}
+
+                  {items.map((item, i) => {
+                    const isExp = expandedItem === item.id
+                    return (
+                      <div key={item.id} style={{ borderBottom: i < items.length - 1 ? `1px solid ${C.borderLight}` : 'none' }}>
+                        <div style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '10px 0' }}>
+                          <button onClick={() => toggleDone(day.id, item.id)} style={{ width: 26, height: 26, borderRadius: 8, flexShrink: 0, background: item.done ? C.success : C.mutedLight, border: `1px solid ${item.done ? C.success : C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: '#fff' }}>
+                            {item.done ? '✓' : ''}
+                          </button>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                              {item.time && <span style={{ fontSize: 10, background: C.ocean + '20', color: C.ocean, fontWeight: 700, borderRadius: 4, padding: '2px 6px', flexShrink: 0 }}>{item.time}</span>}
+                              <span style={{ fontSize: 16, flexShrink: 0 }}>{item.icon}</span>
+                              <span style={{ fontSize: 14, fontWeight: item.done ? 400 : 600, color: item.done ? C.muted : C.ink, textDecoration: item.done ? 'line-through' : 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{item.name}</span>
+                            </div>
+                            {item.reserved && (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 3, flexWrap: 'wrap' }}>
+                                <span style={{ fontSize: 10, background: C.success + '20', color: C.success, fontWeight: 700, borderRadius: 4, padding: '2px 6px', flexShrink: 0 }}>📅 RÉSERVÉ</span>
+                                {item.reservationNote && <span style={{ fontSize: 11, color: C.muted }}>{item.reservationNote}</span>}
+                              </div>
+                            )}
+                          </div>
+                          <button onClick={() => setExpandedItem(isExp ? null : item.id)} style={{ background: C.mutedLight, border: 'none', borderRadius: 8, padding: '4px 8px', fontSize: 15, color: C.muted, flexShrink: 0 }}>···</button>
                         </div>
-                        {item.placeId && (
-                          <button onClick={() => navigate('place_detail', { placeId: item.placeId })} style={{ background: 'none', border: 'none', fontSize: 11, color: C.ocean, padding: 0, marginTop: 2 }}>Voir la fiche →</button>
+
+                        {isExp && (
+                          <div style={{ padding: '4px 0 12px 36px' }}>
+                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: item.reserved ? 8 : 0 }}>
+                              <button onClick={() => toggleReserved(day.id, item.id)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: item.reserved ? C.success + '20' : C.mutedLight, border: `1px solid ${item.reserved ? C.success : C.border}`, borderRadius: 10, padding: '7px 12px', fontSize: 13, fontWeight: 600, color: item.reserved ? C.success : C.muted }}>
+                                📅 {item.reserved ? 'Réservé ✓' : 'Marquer réservé'}
+                              </button>
+                              {item.placeId && (
+                                <button onClick={() => navigate('place_detail', { placeId: item.placeId })} style={{ background: C.ocean + '15', border: `1px solid ${C.ocean}33`, borderRadius: 10, padding: '7px 12px', fontSize: 13, fontWeight: 600, color: C.ocean }}>
+                                  Fiche →
+                                </button>
+                              )}
+                              <button onClick={() => deleteItem(day.id, item.id)} style={{ background: C.dangerLight, border: '1px solid #FCA5A5', borderRadius: 10, padding: '7px 12px', fontSize: 13, fontWeight: 600, color: C.danger }}>
+                                🗑 Supprimer
+                              </button>
+                            </div>
+                            {item.reserved && (
+                              <input placeholder="Référence / heure de réservation…" value={item.reservationNote || ''} onChange={e => updateResNote(day.id, item.id, e.target.value)} style={{ ...INP, marginTop: 8, fontSize: 13, padding: '8px 12px' }} />
+                            )}
+                          </div>
                         )}
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
+
+                  <button onClick={() => setAddingToDay(day)} className="press" style={{ width: '100%', marginTop: items.length > 0 ? 10 : 0, background: C.ocean + '10', border: `1px dashed ${C.ocean}66`, borderRadius: 12, padding: 12, fontSize: 14, fontWeight: 700, color: C.ocean, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                    ➕ Ajouter une activité
+                  </button>
                 </div>
               )}
             </div>
           )
         })}
       </div>
+
+      {addingToDay && (
+        <AddPlanItemSheet
+          day={addingToDay}
+          onAdd={(item) => addItem(addingToDay.id, item)}
+          onClose={() => setAddingToDay(null)}
+          customPlaces={customPlaces}
+        />
+      )}
     </div>
   )
 }
@@ -1551,6 +1774,7 @@ export default function App() {
   const [planningDone, setPlanningDone] = useLocalStorage('miami_planning_v1', {})
   const [favorites, setFavorites] = useLocalStorage('miami_favorites_v1', [])
   const [customPlaces, setCustomPlaces] = useLocalStorage('miami_custom_places_v1', [])
+  const [planningItems, setPlanningItems] = useLocalStorage('miami_planning_items_v1', {})
 
   const navigate = useCallback((s, params = {}) => {
     setStack(prev => [...prev, { screen, params: screenParams }])
@@ -1570,7 +1794,7 @@ export default function App() {
   const TAB_SCREENS = ['home', 'planning', 'places', 'map', 'budget', 'checklist']
   const isTab = TAB_SCREENS.includes(screen)
 
-  const shared = { navigate, goBack, screenParams, checklistDone, setChecklistDone, expenses, setExpenses, planningDone, setPlanningDone, favorites, setFavorites, customPlaces, setCustomPlaces }
+  const shared = { navigate, goBack, screenParams, checklistDone, setChecklistDone, expenses, setExpenses, planningDone, setPlanningDone, favorites, setFavorites, customPlaces, setCustomPlaces, planningItems, setPlanningItems }
 
   return (
     <>
